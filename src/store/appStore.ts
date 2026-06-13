@@ -1,0 +1,162 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import type {
+  Toilet,
+  Inspection,
+  CitizenReview,
+  ProblemReport,
+  Schedule,
+  CheckinRecord,
+  SupplyRecord,
+  FaultReport,
+} from '@/types';
+import { initialToilets } from '@/data/toilets';
+import { initialInspections } from '@/data/inspections';
+import { initialCitizenReviews, initialProblemReports } from '@/data/reviews';
+import { initialSchedules, initialCheckinRecords } from '@/data/schedules';
+import { initialSupplyRecords } from '@/data/supplies';
+import { generateId } from '@/utils/format';
+
+interface AppState {
+  toilets: Toilet[];
+  inspections: Inspection[];
+  citizenReviews: CitizenReview[];
+  problemReports: ProblemReport[];
+  schedules: Schedule[];
+  checkinRecords: CheckinRecord[];
+  supplyRecords: SupplyRecord[];
+
+  addToilet: (toilet: Omit<Toilet, 'id'>) => void;
+  updateToilet: (id: string, toilet: Partial<Toilet>) => void;
+  deleteToilet: (id: string) => void;
+  getToiletById: (id: string) => Toilet | undefined;
+
+  addInspection: (inspection: Omit<Inspection, 'id'>) => void;
+  getInspectionsByToiletId: (toiletId: string) => Inspection[];
+
+  addCitizenReview: (review: Omit<CitizenReview, 'id' | 'createdAt'>) => void;
+  getCitizenReviewsByToiletId: (toiletId: string) => CitizenReview[];
+
+  addProblemReport: (report: Omit<ProblemReport, 'id' | 'reportedAt' | 'status'>) => void;
+  updateProblemReport: (id: string, report: Partial<ProblemReport>) => void;
+  getProblemReportsByToiletId: (toiletId: string) => ProblemReport[];
+
+  addSchedule: (schedule: Omit<Schedule, 'id'>) => void;
+  addCheckinRecord: (record: Omit<CheckinRecord, 'id'>) => void;
+
+  addSupplyRecord: (record: Omit<SupplyRecord, 'id'>) => void;
+  getSupplyRecordsByToiletId: (toiletId: string) => SupplyRecord[];
+
+  addFaultReport: (toiletId: string, inspectionId: string, fault: Omit<FaultReport, 'id'>) => void;
+}
+
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      toilets: initialToilets,
+      inspections: initialInspections,
+      citizenReviews: initialCitizenReviews,
+      problemReports: initialProblemReports,
+      schedules: initialSchedules,
+      checkinRecords: initialCheckinRecords,
+      supplyRecords: initialSupplyRecords,
+
+      addToilet: (toilet) =>
+        set((state) => ({
+          toilets: [...state.toilets, { ...toilet, id: generateId() } as Toilet],
+        })),
+
+      updateToilet: (id, toilet) =>
+        set((state) => ({
+          toilets: state.toilets.map((t) => (t.id === id ? { ...t, ...toilet } : t)),
+        })),
+
+      deleteToilet: (id) =>
+        set((state) => ({
+          toilets: state.toilets.filter((t) => t.id !== id),
+        })),
+
+      getToiletById: (id) => get().toilets.find((t) => t.id === id),
+
+      addInspection: (inspection) =>
+        set((state) => ({
+          inspections: [...state.inspections, { ...inspection, id: generateId() } as Inspection],
+        })),
+
+      getInspectionsByToiletId: (toiletId) =>
+        get().inspections.filter((i) => i.toiletId === toiletId).sort((a, b) => b.date.localeCompare(a.date)),
+
+      addCitizenReview: (review) =>
+        set((state) => ({
+          citizenReviews: [
+            ...state.citizenReviews,
+            { ...review, id: generateId(), createdAt: new Date().toISOString() } as CitizenReview,
+          ],
+        })),
+
+      getCitizenReviewsByToiletId: (toiletId) =>
+        get()
+          .citizenReviews.filter((r) => r.toiletId === toiletId)
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+
+      addProblemReport: (report) =>
+        set((state) => ({
+          problemReports: [
+            ...state.problemReports,
+            { ...report, id: generateId(), reportedAt: new Date().toISOString(), status: 'pending' as const } as ProblemReport,
+          ],
+        })),
+
+      updateProblemReport: (id, report) =>
+        set((state) => ({
+          problemReports: state.problemReports.map((p) => (p.id === id ? { ...p, ...report } : p)),
+        })),
+
+      getProblemReportsByToiletId: (toiletId) =>
+        get()
+          .problemReports.filter((p) => p.toiletId === toiletId)
+          .sort((a, b) => b.reportedAt.localeCompare(a.reportedAt)),
+
+      addSchedule: (schedule) =>
+        set((state) => ({
+          schedules: [...state.schedules, { ...schedule, id: generateId() } as Schedule],
+        })),
+
+      addCheckinRecord: (record) =>
+        set((state) => ({
+          checkinRecords: [...state.checkinRecords, { ...record, id: generateId() } as CheckinRecord],
+        })),
+
+      addSupplyRecord: (record) =>
+        set((state) => ({
+          supplyRecords: [...state.supplyRecords, { ...record, id: generateId() } as SupplyRecord],
+        })),
+
+      getSupplyRecordsByToiletId: (toiletId) =>
+        get()
+          .supplyRecords.filter((s) => s.toiletId === toiletId)
+          .sort((a, b) => b.restockedAt.localeCompare(a.restockedAt)),
+
+      addFaultReport: (toiletId, inspectionId, fault) =>
+        set((state) => ({
+          inspections: state.inspections.map((i) =>
+            i.id === inspectionId
+              ? { ...i, faultReports: [...i.faultReports, { ...fault, id: generateId() } as FaultReport] }
+              : i
+          ),
+        })),
+    }),
+    {
+      name: 'toilet-management-storage',
+      partialize: (state) => ({
+        toilets: state.toilets,
+        inspections: state.inspections,
+        citizenReviews: state.citizenReviews,
+        problemReports: state.problemReports,
+        schedules: state.schedules,
+        checkinRecords: state.checkinRecords,
+        supplyRecords: state.supplyRecords,
+      }),
+    }
+  )
+);
