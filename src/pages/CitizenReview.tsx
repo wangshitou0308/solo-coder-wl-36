@@ -2,9 +2,8 @@ import { useState, useMemo } from 'react';
 import { Plus, Filter, MessageSquare, Star, Search, X, Upload, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StarRating, StatusBadge } from '@/components/ui';
-import { citizenReviews, problemReports } from '@/data/reviews';
-import { toilets } from '@/data/toilets';
-import type { CitizenReview, ProblemReport, ProblemType, ProblemStatus } from '@/types';
+import { useAppStore } from '@/store/appStore';
+import type { ProblemType, ProblemStatus } from '@/types';
 
 type TabKey = 'reviews' | 'reports' | 'satisfaction';
 
@@ -24,6 +23,13 @@ const STATUS_FILTERS: { value: ProblemStatus | 'all'; label: string }[] = [
 ];
 
 export default function CitizenReview() {
+  const toilets = useAppStore((s) => s.toilets);
+  const citizenReviews = useAppStore((s) => s.citizenReviews);
+  const problemReports = useAppStore((s) => s.problemReports);
+  const addCitizenReview = useAppStore((s) => s.addCitizenReview);
+  const addProblemReport = useAppStore((s) => s.addProblemReport);
+  const updateProblemReport = useAppStore((s) => s.updateProblemReport);
+
   const [activeTab, setActiveTab] = useState<TabKey>('reviews');
 
   const [reviewToiletFilter, setReviewToiletFilter] = useState<string>('');
@@ -38,19 +44,18 @@ export default function CitizenReview() {
   const [satisfactionRatings, setSatisfactionRatings] = useState<Record<string, number>>({});
   const [satisfactionComments, setSatisfactionComments] = useState<Record<string, string>>({});
 
-  const [reviews, setReviews] = useState<CitizenReview[]>(citizenReviews);
-  const [reports, setReports] = useState<ProblemReport[]>(problemReports);
-
   const [newReview, setNewReview] = useState({
     toiletId: '',
     rating: 5,
     content: '',
+    citizenName: '',
   });
 
   const [newReport, setNewReport] = useState({
     toiletId: '',
     problemType: 'cleanliness' as ProblemType,
     description: '',
+    citizenName: '',
   });
 
   const getToiletName = (toiletId: string) => {
@@ -58,7 +63,7 @@ export default function CitizenReview() {
   };
 
   const filteredReviews = useMemo(() => {
-    return reviews.filter((r) => {
+    return citizenReviews.filter((r) => {
       if (reviewToiletFilter && r.toiletId !== reviewToiletFilter) return false;
       if (reviewSearch) {
         const search = reviewSearch.toLowerCase();
@@ -71,76 +76,53 @@ export default function CitizenReview() {
       }
       return true;
     }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [reviews, reviewToiletFilter, reviewSearch]);
+  }, [citizenReviews, reviewToiletFilter, reviewSearch]);
 
   const filteredReports = useMemo(() => {
-    return reports.filter((r) => {
+    return problemReports.filter((r) => {
       if (reportStatusFilter !== 'all' && r.status !== reportStatusFilter) return false;
       if (reportToiletFilter && r.toiletId !== reportToiletFilter) return false;
       return true;
     }).sort((a, b) => b.reportedAt.localeCompare(a.reportedAt));
-  }, [reports, reportStatusFilter, reportToiletFilter]);
+  }, [problemReports, reportStatusFilter, reportToiletFilter]);
 
   const satisfactionReports = useMemo(() => {
-    return reports.filter((r) => r.status === 'resolved' && !r.satisfaction);
-  }, [reports]);
+    return filteredReports.filter((r) => r.status === 'resolved' && !r.satisfaction);
+  }, [filteredReports]);
 
   const handleSubmitReview = () => {
     if (!newReview.toiletId || !newReview.content.trim()) return;
-    const review: CitizenReview = {
-      id: `CR${Date.now()}`,
+    addCitizenReview({
       toiletId: newReview.toiletId,
-      citizenName: '当前用户',
+      citizenName: newReview.citizenName.trim() || '匿名市民',
       rating: newReview.rating as 1 | 2 | 3 | 4 | 5,
       content: newReview.content,
       photoUrls: [],
-      createdAt: new Date().toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).replace(/\//g, '-'),
-    };
-    setReviews([review, ...reviews]);
-    setNewReview({ toiletId: '', rating: 5, content: '' });
+    });
+    setNewReview({ toiletId: '', rating: 5, content: '', citizenName: '' });
     setShowReviewModal(false);
   };
 
   const handleSubmitReport = () => {
     if (!newReport.toiletId || !newReport.description.trim()) return;
-    const report: ProblemReport = {
-      id: `PR${Date.now()}`,
+    addProblemReport({
       toiletId: newReport.toiletId,
-      citizenName: '当前用户',
+      citizenName: newReport.citizenName.trim() || '匿名市民',
       problemType: newReport.problemType,
       description: newReport.description,
       photoUrls: [],
-      status: 'pending',
-      reportedAt: new Date().toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).replace(/\//g, '-'),
       assignedTo: '待分配',
-    };
-    setReports([report, ...reports]);
-    setNewReport({ toiletId: '', problemType: 'cleanliness', description: '' });
+    });
+    setNewReport({ toiletId: '', problemType: 'cleanliness', description: '', citizenName: '' });
     setShowReportModal(false);
   };
 
   const handleSubmitSatisfaction = (reportId: string) => {
     const rating = satisfactionRatings[reportId];
     if (!rating) return;
-    setReports((prev) =>
-      prev.map((r) =>
-        r.id === reportId
-          ? { ...r, satisfaction: rating as 1 | 2 | 3 | 4 | 5 }
-          : r
-      )
-    );
+    updateProblemReport(reportId, {
+      satisfaction: rating as 1 | 2 | 3 | 4 | 5,
+    });
     setSatisfactionRatings((prev) => {
       const next = { ...prev };
       delete next[reportId];
@@ -467,6 +449,16 @@ export default function CitizenReview() {
             </div>
             <div className="space-y-4">
               <div>
+                <label className="label">您的昵称</label>
+                <input
+                  type="text"
+                  value={newReview.citizenName}
+                  onChange={(e) => setNewReview((prev) => ({ ...prev, citizenName: e.target.value }))}
+                  className="input"
+                  placeholder="请输入昵称（可留空，默认匿名）"
+                />
+              </div>
+              <div>
                 <label className="label">选择公厕</label>
                 <select
                   value={newReview.toiletId}
@@ -537,6 +529,16 @@ export default function CitizenReview() {
               </button>
             </div>
             <div className="space-y-4">
+              <div>
+                <label className="label">您的昵称</label>
+                <input
+                  type="text"
+                  value={newReport.citizenName}
+                  onChange={(e) => setNewReport((prev) => ({ ...prev, citizenName: e.target.value }))}
+                  className="input"
+                  placeholder="请输入昵称（可留空，默认匿名）"
+                />
+              </div>
               <div>
                 <label className="label">选择公厕</label>
                 <select

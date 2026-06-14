@@ -74,25 +74,60 @@ export const useAppStore = create<AppState>()(
       deleteToilet: (id) =>
         set((state) => ({
           toilets: state.toilets.filter((t) => t.id !== id),
+          inspections: state.inspections.filter((i) => i.toiletId !== id),
+          citizenReviews: state.citizenReviews.filter((r) => r.toiletId !== id),
+          problemReports: state.problemReports.filter((p) => p.toiletId !== id),
+          schedules: state.schedules.filter((s) => s.toiletId !== id),
+          checkinRecords: state.checkinRecords.filter((c) => c.toiletId !== id),
+          supplyRecords: state.supplyRecords.filter((s) => s.toiletId !== id),
         })),
 
       getToiletById: (id) => get().toilets.find((t) => t.id === id),
 
       addInspection: (inspection) =>
-        set((state) => ({
-          inspections: [...state.inspections, { ...inspection, id: generateId() } as Inspection],
-        })),
+        set((state) => {
+          const newInspection = { ...inspection, id: generateId() } as Inspection;
+          const allInspections = [...state.inspections, newInspection];
+          const toiletInspections = allInspections.filter((i) => i.toiletId === inspection.toiletId);
+          const avgScore =
+            toiletInspections.length > 0
+              ? Math.round(
+                  (toiletInspections.reduce((sum, i) => sum + i.totalScore, 0) / toiletInspections.length) * 10
+                ) / 10
+              : 0;
+          return {
+            inspections: allInspections,
+            toilets: state.toilets.map((t) =>
+              t.id === inspection.toiletId ? { ...t, averageInspectionScore: avgScore } : t
+            ),
+          };
+        }),
 
       getInspectionsByToiletId: (toiletId) =>
         get().inspections.filter((i) => i.toiletId === toiletId).sort((a, b) => b.date.localeCompare(a.date)),
 
       addCitizenReview: (review) =>
-        set((state) => ({
-          citizenReviews: [
-            ...state.citizenReviews,
-            { ...review, id: generateId(), createdAt: new Date().toISOString() } as CitizenReview,
-          ],
-        })),
+        set((state) => {
+          const newReview = {
+            ...review,
+            id: generateId(),
+            createdAt: new Date().toISOString(),
+          } as CitizenReview;
+          const allReviews = [...state.citizenReviews, newReview];
+          const toiletReviews = allReviews.filter((r) => r.toiletId === review.toiletId);
+          const avgScore =
+            toiletReviews.length > 0
+              ? Math.round(
+                  (toiletReviews.reduce((sum, r) => sum + r.rating, 0) / toiletReviews.length) * 10
+                ) / 10
+              : 0;
+          return {
+            citizenReviews: allReviews,
+            toilets: state.toilets.map((t) =>
+              t.id === review.toiletId ? { ...t, averageCitizenScore: avgScore } : t
+            ),
+          };
+        }),
 
       getCitizenReviewsByToiletId: (toiletId) =>
         get()

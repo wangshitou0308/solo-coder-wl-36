@@ -78,6 +78,7 @@ export default function ToiletManagement() {
   const [viewingToilet, setViewingToilet] = useState<Toilet | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Toilet | null>(null);
   const [formData, setFormData] = useState<FormData>(emptyFormData);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const filteredToilets = useMemo(() => {
     return toilets.filter((t) => {
@@ -93,11 +94,13 @@ export default function ToiletManagement() {
   const openCreateModal = () => {
     setEditingToilet(null);
     setFormData(emptyFormData);
+    setFormErrors({});
     setIsModalOpen(true);
   };
 
   const openEditModal = (toilet: Toilet) => {
     setEditingToilet(toilet);
+    setFormErrors({});
     setFormData({
       code: toilet.code,
       name: toilet.name,
@@ -117,7 +120,22 @@ export default function ToiletManagement() {
     setIsModalOpen(true);
   };
 
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!formData.code.trim()) errors.code = '请输入厕所编号';
+    if (!formData.name.trim()) errors.name = '请输入厕所名称';
+    if (!formData.address.trim()) errors.address = '请输入详细地址';
+    if (!formData.district) errors.district = '请选择所属区域';
+    if (!formData.type) errors.type = '请选择厕所类型';
+    if (formData.lat < -90 || formData.lat > 90) errors.lat = '纬度范围 -90 ~ 90';
+    if (formData.lng < -180 || formData.lng > 180) errors.lng = '经度范围 -180 ~ 180';
+    if (formData.seatCount < 0) errors.seatCount = '厕位数不能为负数';
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = () => {
+    if (!validateForm()) return;
     if (editingToilet) {
       updateToilet(editingToilet.id, formData);
     } else {
@@ -303,43 +321,61 @@ export default function ToiletManagement() {
             <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-140px)]">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="label">编号 *</label>
+                  <label className="label">编号 <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={formData.code}
                     onChange={(e) =>
                       setFormData({ ...formData, code: e.target.value })
                     }
-                    className="input"
+                    className={cn(
+                      'input',
+                      formErrors.code && 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                    )}
                     placeholder="如 DC-001"
                   />
+                  {formErrors.code && (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.code}</p>
+                  )}
                 </div>
                 <div>
-                  <label className="label">名称 *</label>
+                  <label className="label">名称 <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    className="input"
+                    className={cn(
+                      'input',
+                      formErrors.name && 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                    )}
                     placeholder="公厕名称"
                   />
+                  {formErrors.name && (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.name}</p>
+                  )}
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="label">地址 *</label>
+                  <label className="label">地址 <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={formData.address}
                     onChange={(e) =>
                       setFormData({ ...formData, address: e.target.value })
                     }
-                    className="input"
+                    className={cn(
+                      'input',
+                      formErrors.address && 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                    )}
                     placeholder="详细地址"
                   />
+                  {formErrors.address && (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.address}</p>
+                  )}
                 </div>
                 <div>
-                  <label className="label">区域 *</label>
+                  <label className="label">区域 <span className="text-red-500">*</span></label>
                   <select
                     value={formData.district}
                     onChange={(e) =>
@@ -348,7 +384,10 @@ export default function ToiletManagement() {
                         district: e.target.value as District,
                       })
                     }
-                    className="input"
+                    className={cn(
+                      'input',
+                      formErrors.district && 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                    )}
                   >
                     {districts.map((d) => (
                       <option key={d} value={d}>
@@ -356,9 +395,12 @@ export default function ToiletManagement() {
                       </option>
                     ))}
                   </select>
+                  {formErrors.district && (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.district}</p>
+                  )}
                 </div>
                 <div>
-                  <label className="label">类型 *</label>
+                  <label className="label">类型 <span className="text-red-500">*</span></label>
                   <select
                     value={formData.type}
                     onChange={(e) =>
@@ -367,7 +409,10 @@ export default function ToiletManagement() {
                         type: e.target.value as ToiletType,
                       })
                     }
-                    className="input"
+                    className={cn(
+                      'input',
+                      formErrors.type && 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                    )}
                   >
                     {Object.entries(toiletTypeLabels).map(([key, label]) => (
                       <option key={key} value={key}>
@@ -375,6 +420,9 @@ export default function ToiletManagement() {
                       </option>
                     ))}
                   </select>
+                  {formErrors.type && (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.type}</p>
+                  )}
                 </div>
                 <div>
                   <label className="label">纬度</label>
@@ -385,8 +433,14 @@ export default function ToiletManagement() {
                     onChange={(e) =>
                       setFormData({ ...formData, lat: parseFloat(e.target.value) || 0 })
                     }
-                    className="input"
+                    className={cn(
+                      'input',
+                      formErrors.lat && 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                    )}
                   />
+                  {formErrors.lat && (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.lat}</p>
+                  )}
                 </div>
                 <div>
                   <label className="label">经度</label>
@@ -397,8 +451,14 @@ export default function ToiletManagement() {
                     onChange={(e) =>
                       setFormData({ ...formData, lng: parseFloat(e.target.value) || 0 })
                     }
-                    className="input"
+                    className={cn(
+                      'input',
+                      formErrors.lng && 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                    )}
                   />
+                  {formErrors.lng && (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.lng}</p>
+                  )}
                 </div>
                 <div>
                   <label className="label">开放时间</label>
@@ -424,8 +484,14 @@ export default function ToiletManagement() {
                         seatCount: parseInt(e.target.value) || 0,
                       })
                     }
-                    className="input"
+                    className={cn(
+                      'input',
+                      formErrors.seatCount && 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                    )}
                   />
+                  {formErrors.seatCount && (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.seatCount}</p>
+                  )}
                 </div>
                 <div className="sm:col-span-2">
                   <label className="label">管理单位</label>

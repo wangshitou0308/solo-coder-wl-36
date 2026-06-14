@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   MapPin,
@@ -11,6 +10,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSidebar } from './AppLayout';
 
 const navItems = [
   { icon: MapPin, label: '地图总览', path: '/' },
@@ -22,7 +22,7 @@ const navItems = [
 ];
 
 export default function Sidebar() {
-  const [expanded, setExpanded] = useState(false);
+  const { expanded, toggleExpanded } = useSidebar();
 
   return (
     <aside
@@ -84,7 +84,7 @@ export default function Sidebar() {
       </nav>
 
       <button
-        onClick={() => setExpanded(!expanded)}
+        onClick={toggleExpanded}
         className="h-12 flex items-center justify-center border-t border-primary-600 hover:bg-primary-600 transition-colors"
       >
         {expanded ? (

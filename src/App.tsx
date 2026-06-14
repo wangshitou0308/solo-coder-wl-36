@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import MapOverview from "@/pages/MapOverview";
 import ToiletDetail from "@/pages/ToiletDetail";
@@ -8,38 +8,29 @@ import CitizenReview from "@/pages/CitizenReview";
 import Schedule from "@/pages/Schedule";
 import Supplies from "@/pages/Supplies";
 
-function LayoutWrapper() {
-  return (
-    <AppLayout>
-      <Outlet />
-    </AppLayout>
-  );
-}
-
-const router = createBrowserRouter([
-  {
-    element: <LayoutWrapper />,
-    children: [
-      { path: "/", element: <MapOverview /> },
-      { path: "/toilet/:id", element: <ToiletDetail /> },
-      { path: "/management", element: <ToiletManagement /> },
-      { path: "/inspection", element: <Inspection /> },
-      { path: "/citizen", element: <CitizenReview /> },
-      { path: "/schedule", element: <Schedule /> },
-      { path: "/supplies", element: <Supplies /> },
-      {
-        path: "*",
-        element: (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <p className="text-2xl font-semibold mb-2">404</p>
-            <p className="text-sm">页面不存在</p>
-          </div>
-        ),
-      },
-    ],
-  },
-]);
-
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <BrowserRouter>
+      <AppLayout>
+        <Routes>
+          <Route path="/" element={<MapOverview />} />
+          <Route path="/toilet/:id" element={<ToiletDetail />} />
+          <Route path="/management" element={<ToiletManagement />} />
+          <Route path="/inspection" element={<Inspection />} />
+          <Route path="/citizen" element={<CitizenReview />} />
+          <Route path="/schedule" element={<Schedule />} />
+          <Route path="/supplies" element={<Supplies />} />
+          <Route
+            path="*"
+            element={
+              <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                <p className="text-2xl font-semibold mb-2">404</p>
+                <p className="text-sm">页面不存在</p>
+              </div>
+            }
+          />
+        </Routes>
+      </AppLayout>
+    </BrowserRouter>
+  );
 }
