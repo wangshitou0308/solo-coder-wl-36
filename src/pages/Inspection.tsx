@@ -44,11 +44,16 @@ const ratingDimensions = [
 
 type RatingKey = (typeof ratingDimensions)[number]['key'];
 
+const INSPECTOR_ID = 'INS01';
+const INSPECTOR_NAME = '张伟';
+
 export default function InspectionPage() {
   const toilets = useAppStore((s) => s.toilets);
   const addInspection = useAppStore((s) => s.addInspection);
   const getInspectionsByToiletId = useAppStore((s) => s.getInspectionsByToiletId);
   const addFaultReport = useAppStore((s) => s.addFaultReport);
+  const getPendingInspectionTaskByToiletId = useAppStore((s) => s.getPendingInspectionTaskByToiletId);
+  const completeInspectionTask = useAppStore((s) => s.completeInspectionTask);
 
   const [selectedToiletId, setSelectedToiletId] = useState<string | null>(null);
   const [expandedInspectionId, setExpandedInspectionId] = useState<string | null>(null);
@@ -135,8 +140,8 @@ export default function InspectionPage() {
 
     const inspection: Omit<Inspection, 'id'> = {
       toiletId: selectedToilet.id,
-      inspectorId: 'INS01',
-      inspectorName: '张伟',
+      inspectorId: INSPECTOR_ID,
+      inspectorName: INSPECTOR_NAME,
       date: today,
       groundCleanliness: ratings.groundCleanliness,
       toiletCleanliness: ratings.toiletCleanliness,
@@ -151,12 +156,21 @@ export default function InspectionPage() {
     addInspection(inspection);
 
     setTimeout(() => {
-      const inspections = getInspectionsByToiletId(selectedToilet.id);
-      const newInspection = inspections[0];
+      const toiletInspections = getInspectionsByToiletId(selectedToilet.id);
+      const newInspection = toiletInspections[0];
       if (newInspection) {
         faultReports.forEach((fault) => {
           addFaultReport(selectedToilet.id, newInspection.id, fault);
         });
+
+        const pendingTask = getPendingInspectionTaskByToiletId(
+          selectedToilet.id,
+          INSPECTOR_ID,
+          today
+        );
+        if (pendingTask) {
+          completeInspectionTask(pendingTask.id, newInspection.id);
+        }
       }
     }, 10);
 

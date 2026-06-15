@@ -26,12 +26,14 @@ import {
   Star,
   ChevronDown,
   ChevronUp,
+  Wrench,
+  ListChecks,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { formatDateTime, formatHours } from '@/utils';
 import { StarRating, ScoreBadge, StatusBadge } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import type { ProblemType, ToiletType } from '@/types';
+import type { ProblemType, ToiletType, WorkOrderStatus, InspectionTaskStatus } from '@/types';
 
 const toiletTypeLabels: Record<ToiletType, string> = {
   street: '街道',
@@ -46,6 +48,42 @@ const problemTypeLabels: Record<ProblemType, string> = {
   supply_shortage: '物资短缺',
   facility_damage: '设施损坏',
   other: '其他问题',
+};
+
+const WO_STATUS_LABELS: Record<WorkOrderStatus, string> = {
+  unassigned: '待分派',
+  assigned: '待处理',
+  processing: '处理中',
+  reviewing: '待复核',
+  completed: '已完成',
+};
+
+const WO_STATUS_COLORS: Record<WorkOrderStatus, string> = {
+  unassigned: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  assigned: 'bg-blue-50 text-blue-700 border-blue-200',
+  processing: 'bg-purple-50 text-purple-700 border-purple-200',
+  reviewing: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  completed: 'bg-green-50 text-green-700 border-green-200',
+};
+
+const WO_STATUS_DOTS: Record<WorkOrderStatus, string> = {
+  unassigned: 'bg-yellow-500',
+  assigned: 'bg-blue-500',
+  processing: 'bg-purple-500',
+  reviewing: 'bg-cyan-500',
+  completed: 'bg-green-500',
+};
+
+const TASK_STATUS_LABELS: Record<InspectionTaskStatus, string> = {
+  pending: '待巡检',
+  completed: '已完成',
+  overdue: '逾期',
+};
+
+const TASK_STATUS_COLORS: Record<InspectionTaskStatus, string> = {
+  pending: 'bg-yellow-50 text-yellow-700',
+  completed: 'bg-green-50 text-green-700',
+  overdue: 'bg-red-50 text-red-700',
 };
 
 const customIcon = L.divIcon({
@@ -70,11 +108,15 @@ export default function ToiletDetail() {
   const getInspectionsByToiletId = useAppStore((s) => s.getInspectionsByToiletId);
   const getCitizenReviewsByToiletId = useAppStore((s) => s.getCitizenReviewsByToiletId);
   const getProblemReportsByToiletId = useAppStore((s) => s.getProblemReportsByToiletId);
+  const getWorkOrdersByToiletId = useAppStore((s) => s.getWorkOrdersByToiletId);
+  const getInspectionTasksByToiletId = useAppStore((s) => s.getInspectionTasksByToiletId);
 
   const toilet = id ? getToiletById(id) : undefined;
   const inspections = id ? getInspectionsByToiletId(id).slice(0, 10) : [];
   const reviews = id ? getCitizenReviewsByToiletId(id) : [];
   const problemReports = id ? getProblemReportsByToiletId(id) : [];
+  const workOrders = id ? getWorkOrdersByToiletId(id) : [];
+  const inspectionTasks = id ? getInspectionTasksByToiletId(id) : [];
 
   const visibleReviews = showAllReviews ? reviews : reviews.slice(0, 3);
 
@@ -411,6 +453,74 @@ export default function ToiletDetail() {
                   )}
                 </button>
               )}
+            </div>
+          )}
+        </section>
+
+        <section className="card p-6 animate-slide-up stagger-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Wrench size={20} className="text-primary-600" />
+            <h2 className="text-lg font-semibold text-gray-900">关联工单</h2>
+            <span className="text-xs text-gray-400">{workOrders.length} 条</span>
+          </div>
+
+          {workOrders.length === 0 ? (
+            <div className="py-8 text-center text-gray-400">
+              <CheckCircle size={32} className="mx-auto mb-2 opacity-40" />
+              <p className="text-sm">暂无关联工单</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {workOrders.map((wo) => (
+                <div
+                  key={wo.id}
+                  className="p-3 bg-gray-50 rounded-lg border border-gray-100 flex items-start justify-between gap-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{wo.title}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {wo.source === 'citizen' ? '市民上报' : '巡检故障'} · {wo.createdAt}
+                    </p>
+                  </div>
+                  <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border flex-shrink-0', WO_STATUS_COLORS[wo.status])}>
+                    <span className={cn('w-1.5 h-1.5 rounded-full', WO_STATUS_DOTS[wo.status])} />
+                    {WO_STATUS_LABELS[wo.status]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card p-6 animate-slide-up stagger-4">
+          <div className="flex items-center gap-2 mb-4">
+            <ListChecks size={20} className="text-primary-600" />
+            <h2 className="text-lg font-semibold text-gray-900">巡检任务状态</h2>
+          </div>
+
+          {inspectionTasks.length === 0 ? (
+            <div className="py-8 text-center text-gray-400">
+              <ListChecks size={32} className="mx-auto mb-2 opacity-40" />
+              <p className="text-sm">暂无巡检任务</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {inspectionTasks.slice(0, 5).map((task) => (
+                <div
+                  key={task.id}
+                  className="p-3 bg-gray-50 rounded-lg border border-gray-100 flex items-start justify-between gap-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{task.title}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {task.inspectorName} · 计划日期 {task.planDate}
+                    </p>
+                  </div>
+                  <span className={cn('badge flex-shrink-0', TASK_STATUS_COLORS[task.status])}>
+                    {TASK_STATUS_LABELS[task.status]}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </section>

@@ -1,9 +1,12 @@
 import { NavLink } from 'react-router-dom';
 import {
+  LayoutDashboard,
   MapPin,
   Building,
   ClipboardCheck,
   MessageSquare,
+  Wrench,
+  ListChecks,
   Calendar,
   Package,
   ChevronLeft,
@@ -13,9 +16,12 @@ import { cn } from '@/lib/utils';
 import { useSidebar } from './AppLayout';
 
 const navItems = [
-  { icon: MapPin, label: '地图总览', path: '/' },
+  { icon: LayoutDashboard, label: '运营驾驶舱', path: '/dashboard' },
+  { icon: MapPin, label: '地图总览', path: '/map' },
   { icon: Building, label: '公厕台账', path: '/management' },
+  { icon: ListChecks, label: '巡检任务', path: '/inspection-tasks' },
   { icon: ClipboardCheck, label: '巡检评分', path: '/inspection' },
+  { icon: Wrench, label: '工单中心', path: '/work-orders' },
   { icon: MessageSquare, label: '市民评价', path: '/citizen' },
   { icon: Calendar, label: '保洁排班', path: '/schedule' },
   { icon: Package, label: '耗材管理', path: '/supplies' },

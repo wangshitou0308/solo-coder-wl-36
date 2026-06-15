@@ -9,12 +9,17 @@ import type {
   CheckinRecord,
   SupplyRecord,
   FaultReport,
+  WorkOrder,
+  WorkOrderTimeline,
+  InspectionTask,
 } from '@/types';
 import { initialToilets } from '@/data/toilets';
 import { initialInspections } from '@/data/inspections';
 import { initialCitizenReviews, initialProblemReports } from '@/data/reviews';
 import { initialSchedules, initialCheckinRecords } from '@/data/schedules';
 import { initialSupplyRecords } from '@/data/supplies';
+import { initialWorkOrders } from '@/data/workOrders';
+import { initialInspectionTasks } from '@/data/inspectionTasks';
 import { generateId } from '@/utils/format';
 
 interface AppState {
@@ -25,6 +30,8 @@ interface AppState {
   schedules: Schedule[];
   checkinRecords: CheckinRecord[];
   supplyRecords: SupplyRecord[];
+  workOrders: WorkOrder[];
+  inspectionTasks: InspectionTask[];
 
   addToilet: (toilet: Omit<Toilet, 'id'>) => void;
   updateToilet: (id: string, toilet: Partial<Toilet>) => void;
@@ -48,6 +55,18 @@ interface AppState {
   getSupplyRecordsByToiletId: (toiletId: string) => SupplyRecord[];
 
   addFaultReport: (toiletId: string, inspectionId: string, fault: Omit<FaultReport, 'id'>) => void;
+
+  addWorkOrder: (order: Omit<WorkOrder, 'id'>) => void;
+  updateWorkOrder: (id: string, order: Partial<WorkOrder>) => void;
+  getWorkOrdersByToiletId: (toiletId: string) => WorkOrder[];
+  addWorkOrderTimeline: (orderId: string, entry: Omit<WorkOrderTimeline, 'id'>) => void;
+
+  addInspectionTask: (task: Omit<InspectionTask, 'id'>) => void;
+  updateInspectionTask: (id: string, task: Partial<InspectionTask>) => void;
+  getInspectionTasksByToiletId: (toiletId: string) => InspectionTask[];
+  getPendingInspectionTaskByToiletId: (toiletId: string, inspectorId: string, date: string) => InspectionTask | undefined;
+  completeInspectionTask: (taskId: string, inspectionId: string) => void;
+  scanOverdueTasks: (today: string) => number;
 }
 
 export const useAppStore = create<AppState>()(
@@ -60,6 +79,8 @@ export const useAppStore = create<AppState>()(
       schedules: initialSchedules,
       checkinRecords: initialCheckinRecords,
       supplyRecords: initialSupplyRecords,
+      workOrders: initialWorkOrders,
+      inspectionTasks: initialInspectionTasks,
 
       addToilet: (toilet) =>
         set((state) => ({
@@ -180,6 +201,83 @@ export const useAppStore = create<AppState>()(
               : i
           ),
         })),
+
+      addWorkOrder: (order) =>
+        set((state) => ({
+          workOrders: [...state.workOrders, { ...order, id: generateId() } as WorkOrder],
+        })),
+
+      updateWorkOrder: (id, order) =>
+        set((state) => ({
+          workOrders: state.workOrders.map((w) => (w.id === id ? { ...w, ...order } : w)),
+        })),
+
+      getWorkOrdersByToiletId: (toiletId) =>
+        get()
+          .workOrders.filter((w) => w.toiletId === toiletId)
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+
+      addWorkOrderTimeline: (orderId, entry) =>
+        set((state) => ({
+          workOrders: state.workOrders.map((w) =>
+            w.id === orderId
+              ? { ...w, timeline: [...w.timeline, { ...entry, id: generateId() } as WorkOrderTimeline] }
+              : w
+          ),
+        })),
+
+      addInspectionTask: (task) =>
+        set((state) => ({
+          inspectionTasks: [...state.inspectionTasks, { ...task, id: generateId() } as InspectionTask],
+        })),
+
+      updateInspectionTask: (id, task) =>
+        set((state) => ({
+          inspectionTasks: state.inspectionTasks.map((t) => (t.id === id ? { ...t, ...task } : t)),
+        })),
+
+      getInspectionTasksByToiletId: (toiletId) =>
+        get()
+          .inspectionTasks.filter((t) => t.toiletIds.includes(toiletId))
+          .sort((a, b) => b.planDate.localeCompare(a.planDate)),
+
+      getPendingInspectionTaskByToiletId: (toiletId, inspectorId, date) =>
+        get().inspectionTasks.find(
+          (t) =>
+            t.toiletIds.includes(toiletId) &&
+            t.inspectorId === inspectorId &&
+            t.planDate === date &&
+            (t.status === 'pending' || t.status === 'overdue')
+        ),
+
+      completeInspectionTask: (taskId, inspectionId) =>
+        set((state) => ({
+          inspectionTasks: state.inspectionTasks.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  status: 'completed' as const,
+                  inspectionId,
+                  completedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                }
+              : t
+          ),
+        })),
+
+      scanOverdueTasks: (today) => {
+        let overdueCount = 0;
+        set((state) => {
+          const updatedTasks = state.inspectionTasks.map((t) => {
+            if (t.status === 'pending' && t.planDate < today) {
+              overdueCount++;
+              return { ...t, status: 'overdue' as const };
+            }
+            return t;
+          });
+          return { inspectionTasks: updatedTasks };
+        });
+        return overdueCount;
+      },
     }),
     {
       name: 'toilet-management-storage',
@@ -191,6 +289,8 @@ export const useAppStore = create<AppState>()(
         schedules: state.schedules,
         checkinRecords: state.checkinRecords,
         supplyRecords: state.supplyRecords,
+        workOrders: state.workOrders,
+        inspectionTasks: state.inspectionTasks,
       }),
     }
   )

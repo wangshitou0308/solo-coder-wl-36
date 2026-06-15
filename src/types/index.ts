@@ -103,6 +103,57 @@ export interface CheckinRecord {
   selfInspectionScore?: number;
 }
 
+export type WorkOrderStatus = 'unassigned' | 'assigned' | 'processing' | 'reviewing' | 'completed';
+
+export type WorkOrderPriority = 'normal' | 'urgent' | 'critical';
+
+export type WorkOrderSource = 'citizen' | 'inspection';
+
+export interface WorkOrderTimeline {
+  id: string;
+  action: string;
+  operator: string;
+  timestamp: string;
+  remark?: string;
+}
+
+export interface WorkOrder {
+  id: string;
+  title: string;
+  description: string;
+  source: WorkOrderSource;
+  sourceId: string;
+  toiletId: string;
+  district: District;
+  priority: WorkOrderPriority;
+  status: WorkOrderStatus;
+  assignedTo?: string;
+  assignedRole?: 'cleaner' | 'repairer';
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  feedback?: string;
+  timeline: WorkOrderTimeline[];
+}
+
+export type InspectionTaskStatus = 'pending' | 'completed' | 'overdue';
+
+export type InspectionFrequency = 'once' | 'daily' | 'weekly' | 'biweekly' | 'monthly';
+
+export interface InspectionTask {
+  id: string;
+  title: string;
+  toiletIds: string[];
+  inspectorId: string;
+  inspectorName: string;
+  planDate: string;
+  frequency: InspectionFrequency;
+  status: InspectionTaskStatus;
+  inspectionId?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
 export type SupplyType =
   | 'toilet_paper'
   | 'hand_sanitizer'
